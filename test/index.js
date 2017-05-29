@@ -13,6 +13,14 @@ describe('createPasswordTransform', () => {
     jest.clearAllMocks();
   })
 
+  function defaultParams() {
+    return {
+      serviceName: 'FedGovt',
+      passwordPaths: 'secret',
+      logger: jest.fn()
+    };
+  }
+
   it('should throw if any required arguments are missing', () => {
     expect(() => createPasswordTransform()).toThrow();
 
@@ -28,10 +36,7 @@ describe('createPasswordTransform', () => {
 
   it('should set secrets from state when serializing', async () => {
     const state = { secret: 4815162342 };
-    const transform = createPasswordTransform({
-      serviceName: 'FedGovt',
-      passwordPaths: 'secret'
-    });
+    const transform = createPasswordTransform(defaultParams());
 
     await transform.out(state);
 
@@ -46,7 +51,7 @@ describe('createPasswordTransform', () => {
     };
 
     const transform = createPasswordTransform({
-      serviceName: 'FedGovt',
+      ...defaultParams(),
       passwordPaths: state => Object.keys(state)
     });
 
@@ -66,10 +71,7 @@ describe('createPasswordTransform', () => {
 
   it('should clear secrets from state unless directed not to', async () => {
     let state = { secret: 4815162342 };
-    let transform = createPasswordTransform({
-      serviceName: 'FedGovt',
-      passwordPaths: 'secret'
-    });
+    let transform = createPasswordTransform(defaultParams());
 
     let transformed = await transform.out(state);
 
@@ -78,8 +80,7 @@ describe('createPasswordTransform', () => {
     state = { secret: "I'm back" };
 
     transform = createPasswordTransform({
-      serviceName: 'FedGovt',
-      passwordPaths: 'secret',
+      ...defaultParams(),
       clearPasswords: false
     });
 
@@ -89,10 +90,7 @@ describe('createPasswordTransform', () => {
 
   it('should populate state with secrets when deserializing', async () => {
     const state = { secret: undefined };
-    const transform = createPasswordTransform({
-      serviceName: 'FedGovt',
-      passwordPaths: 'secret'
-    });
+    const transform = createPasswordTransform(defaultParams());
 
     getPassword.mockReturnValue('hunter42');
     const transformed = await transform.in(state);
@@ -103,13 +101,7 @@ describe('createPasswordTransform', () => {
 
   it('should handle errors reading from the keychain', async () => {
     const state = { secret: undefined };
-    const logger = jest.fn();
-
-    const transform = createPasswordTransform({
-      serviceName: 'FedGovt',
-      passwordPaths: 'secret',
-      logger
-    });
+    const transform = createPasswordTransform(defaultParams());
 
     getPassword.mockImplementationOnce(() => {
       throw new Error('Not permitted');
@@ -118,7 +110,6 @@ describe('createPasswordTransform', () => {
     const transformed = await transform.in(state);
 
     expect(transformed.secret).toEqual(undefined);
-    expect(logger).toHaveBeenCalled();
   });
 
   it('should getting & setting deeply nested paths', async () => {
@@ -139,7 +130,7 @@ describe('createPasswordTransform', () => {
     ];
 
     const transform = createPasswordTransform({
-      serviceName: 'FedGovt',
+      ...defaultParams(),
       passwordPaths,
     });
 

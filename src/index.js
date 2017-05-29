@@ -58,7 +58,10 @@ export default function createPasswordTransform(config = {}) {
     for (const path of pathsToSet) {
       try {
         const secret = await getPassword(serviceName, path);
-        if (!!secret) set(inboundState, path, secret);
+        if (!!secret) {
+          logger(`Applying secret to ${path}`);
+          set(inboundState, path, secret);
+        }
       } catch (err) {
         logger(`Unable to read ${path} from keytar`, err);
       }
@@ -83,6 +86,7 @@ export default function createPasswordTransform(config = {}) {
       if (!secret) continue;
 
       try {
+        logger(`Writing secret under ${path}`);
         await setPassword(serviceName, path, secret);
         if (clearPasswords) unset(outboundState, path);
       } catch (err) {
