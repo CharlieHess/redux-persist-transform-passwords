@@ -6,6 +6,7 @@ interface PasswordConfig<State> extends TransformConfig {
   serviceName: string;
   passwordPaths: string|Array<string>|PathSelector<State>;
   clearPasswords?: boolean;
+  serialize?: boolean;
   logger?: Function;
 }
 
