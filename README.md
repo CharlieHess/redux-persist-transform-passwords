@@ -19,8 +19,7 @@ Given a state shape like:
 }
 ```
 
-Supply either a getter string (see Lodash [get](https://lodash.com/docs/4.17.4#get))
-or a function that, given your input state, returns a getter string.
+Supply either a getter string (see Lodash [get](https://lodash.com/docs/4.17.4#get)) or a function that, given your input state, returns a getter string:
 
 ```js
 import { persistStore } from 'redux-persist';
@@ -37,3 +36,7 @@ persistStore(store, {
   asyncTransforms: true
 });
 ```
+
+Before serialization, the secrets will be removed from your state and written out using `keytar`. When the store is rehydrated, the secrets are read in from `keytar` and reapplied to your state.
+
+You can find more usage examples by reading the tests.

@@ -4,6 +4,18 @@ import unset from 'lodash.unset';
 import { createTransform } from 'redux-persist';
 import { getPassword, setPassword } from 'keytar';
 
+/**
+ * Creates a new transform instance.
+ *
+ * @export
+ * @param {Object} config
+ * @param {String} config.serviceName     A unique identifier to reference passwords in the keychain
+ * @param {String|Array<String>|Function} config.passwordPaths  Lodash getter path(s) to passwords
+ * in your state, or a function that, given your state, returns path(s)
+ * @param {Boolean} config.clearPasswords False to retain passwords in the persisted state
+ * @param {Function} config.logger        A logging method
+ * @returns {Transform}                   The redux-persist Transform
+ */
 export default function createPasswordTransform(config = {}) {
   const serviceName = config.serviceName;
   const passwordPaths = config.passwordPaths;
@@ -49,7 +61,6 @@ export default function createPasswordTransform(config = {}) {
         if (!!secret) set(inboundState, path, secret);
       } catch (err) {
         logger(`Unable to read ${path} from keytar`, err);
-        break;
       }
     }
 
@@ -69,10 +80,13 @@ export default function createPasswordTransform(config = {}) {
 
     for (const path of pathsToGet) {
       const secret = get(state, path);
+      if (!secret) continue;
 
-      if (!!secret) {
+      try {
         await setPassword(serviceName, path, secret);
         if (clearPasswords) unset(outboundState, path);
+      } catch (err) {
+        logger(`Unable to write ${path} to keytar`, err);
       }
     }
 
