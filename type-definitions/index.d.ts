@@ -5,7 +5,7 @@ export type PathSelector<State> = (state: State) => string|Array<string>;
 interface PasswordConfig<State> extends TransformConfig {
   serviceName: string;
   passwordPaths: string|Array<string>|PathSelector<State>;
-  clearPasswords: boolean;
+  clearPasswords?: boolean;
 }
 
 export default function createPasswordTransform<State, Raw>(config?: PasswordConfig<State>): Transform<State, Raw>;
