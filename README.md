@@ -37,6 +37,17 @@ persistStore(store, {
 });
 ```
 
-Before serialization, the secrets will be removed from your state and written out using `keytar`. When the store is rehydrated, the secrets are read in from `keytar` and reapplied to your state.
+Before serialization, the values at `passwordPaths` will be removed from your state and written into `keytar`. When the store is rehydrated, the secrets are read in from `keytar` and reapplied to your state.
 
 You can find more usage examples by reading the tests.
+
+## API
+
+* `createPasswordTransform(config)` - Creates a new transform instance
+
+* `config (Object)` - Configuration parameters
+    * `serviceName (String)` - A unique identifier to reference passwords in the keychain
+    * `passwordPaths (String|Array<String>|((state) => String|Array<String>)` - Lodash getter path(s) to the state properties that should be written to `keytar`, or a function that, given your state, returns getter paths. `keytar` only supports writing strings, so if a property is not a string it will be coerced.
+    * `clearPasswords (Boolean)` - Whether or not to clear the properties from `passwordPaths` before the state is persisted. Defaults to `true`.
+    * `serialize (Boolean)` - Whether or not to serialize password properties as JSON strings. Defaults to `false`.
+    * `logger ((message, ...args) => void)` - An optional logging method. Defaults to `noop`.

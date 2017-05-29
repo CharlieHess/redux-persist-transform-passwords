@@ -18,8 +18,7 @@ describe('createPasswordTransform', () => {
   function defaultParams() {
     return {
       serviceName: 'FedGovt',
-      passwordPaths: 'secret',
-      logger: jest.fn()
+      passwordPaths: 'secret'
     };
   }
 
@@ -42,7 +41,7 @@ describe('createPasswordTransform', () => {
 
     await transform.in(state);
 
-    expect(setPassword).toHaveBeenCalledWith('FedGovt', 'secret', state.secret);
+    expect(setPassword).toHaveBeenCalledWith('FedGovt', 'secret', state.secret.toString());
   });
 
   it('should support setting multiple secrets', async () => {
@@ -62,13 +61,13 @@ describe('createPasswordTransform', () => {
     expect(setPassword).toHaveBeenCalledTimes(3);
 
     expect(setPassword.mock.calls[0][1]).toEqual('first');
-    expect(setPassword.mock.calls[0][2]).toEqual(state.first);
+    expect(setPassword.mock.calls[0][2]).toEqual(state.first.toString());
 
     expect(setPassword.mock.calls[1][1]).toEqual('second');
-    expect(setPassword.mock.calls[1][2]).toEqual(state.second);
+    expect(setPassword.mock.calls[1][2]).toEqual(state.second.toString());
 
     expect(setPassword.mock.calls[2][1]).toEqual('third');
-    expect(setPassword.mock.calls[2][2]).toEqual(state.third);
+    expect(setPassword.mock.calls[2][2]).toEqual(state.third.toString());
   });
 
   it('should clear secrets from state unless directed not to', async () => {
@@ -170,5 +169,25 @@ describe('createPasswordTransform', () => {
     expect(get(transformed, passwordPaths[1])).toEqual('from the keychain');
 
     expect(getPassword).toHaveBeenCalledTimes(2);
+  });
+
+  it('should serialize secrets if specified', async () => {
+    const state = { secret: { password: 4815162342 } };
+    const transform = createPasswordTransform({
+      ...defaultParams(),
+      serialize: true
+    });
+
+    await transform.in(state);
+
+    expect(setPassword).toHaveBeenCalledWith(
+      'FedGovt',
+      'secret',
+      JSON.stringify(state.secret)
+    );
+
+    const transformed = await transform.out(state);
+
+    expect(transformed).toEqual(state);
   });
 });

@@ -1,4 +1,4 @@
-import { get } from 'lodash';
+import { get, noop } from 'lodash';
 import { set, unset } from 'lodash/fp';
 import { createTransform } from 'redux-persist';
 import { getPassword, setPassword } from 'keytar';
@@ -12,6 +12,7 @@ import { getPassword, setPassword } from 'keytar';
  * @param {String|Array<String>|Function} config.passwordPaths  Lodash getter path(s) to passwords
  * in your state, or a function that, given your state, returns path(s)
  * @param {Boolean} config.clearPasswords False to retain passwords in the persisted state
+ * @param {Boolean} config.serialize      True to serialize password objects to JSON
  * @param {Function} config.logger        A logging method
  * @returns {Transform}                   The redux-persist Transform
  */
@@ -19,7 +20,8 @@ export default function createPasswordTransform(config = {}) {
   const serviceName = config.serviceName;
   const passwordPaths = config.passwordPaths;
   const clearPasswords = config.clearPasswords !== false;
-  const logger = config.logger || console.log.bind(console);
+  const serialize = !!config.serialize;
+  const logger = config.logger || noop;
 
   if (!serviceName) throw new Error('serviceName is required');
   if (!passwordPaths) throw new Error('passwordPaths is required');
@@ -55,11 +57,14 @@ export default function createPasswordTransform(config = {}) {
 
     for (const path of pathsToGet) {
       const secret = get(state, path);
-      if (!secret) continue;
+      if (!secret) {
+        logger('Nothing found at path', path);
+        continue;
+      }
 
       try {
         logger(`Writing secret under ${path}`, inboundState);
-        await setPassword(serviceName, path, secret);
+        await setPassword(serviceName, path, coerceString(secret, serialize));
 
         // Clear out the passwords unless directed not to. Use an immutable
         // version of unset to avoid modifying the original state object.
@@ -95,7 +100,8 @@ export default function createPasswordTransform(config = {}) {
         // Use an immutable version of set to avoid modifying the original
         // state object.
         if (!!secret) {
-          outboundState = set(path, secret, outboundState);
+          const toSet = serialize ? JSON.parse(secret) : secret;
+          outboundState = set(path, toSet, outboundState);
         }
       } catch (err) {
         logger(`Unable to read ${path} from keytar`, err);
@@ -110,4 +116,20 @@ export default function createPasswordTransform(config = {}) {
     outbound,
     config
   );
+}
+
+/**
+ * Keytar only supports setting strings, so coerce our value to a string or
+ * serialize it.
+ *
+ * @param {any} value         The value being stored
+ * @param {Boolean} serialize Whether or not we should JSON.stringify
+ * @returns                   The value as a string
+ */
+function coerceString(value, serialize) {
+  return serialize
+    ? JSON.stringify(value)
+    : (typeof value !== 'string')
+      ? value.toString()
+      : value;
 }
