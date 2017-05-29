@@ -1,6 +1,5 @@
-import get from 'lodash.get';
-import set from 'lodash.set';
-import unset from 'lodash.unset';
+import { get } from 'lodash';
+import { set, unset } from 'lodash/fp';
 import { createTransform } from 'redux-persist';
 import { getPassword, setPassword } from 'keytar';
 
@@ -44,41 +43,14 @@ export default function createPasswordTransform(config = {}) {
   }
 
   /**
-   * Transform that occurs when the store is being hydrated with state.
-   * Retrieve the password path(s), get the actual passwords from the keychain
-   * and apply them to the inbound state.
-   *
-   * @param {Object} state  The inbound state
-   * @returns               The transformed state that will hydrate the store
-   */
-  async function inbound(state) {
-    const inboundState = { ...state };
-    const pathsToSet = getPasswordPaths(state);
-
-    for (const path of pathsToSet) {
-      try {
-        const secret = await getPassword(serviceName, path);
-        if (!!secret) {
-          logger(`Applying secret to ${path}`);
-          set(inboundState, path, secret);
-        }
-      } catch (err) {
-        logger(`Unable to read ${path} from keytar`, err);
-      }
-    }
-
-    return inboundState;
-  }
-
-  /**
    * Transform that occurs before state is persisted. Retrieve the password
    * path(s) from state, set them on the keychain and clear them from state.
    *
-   * @param {Object} state  The outbound state
+   * @param {Object} state  The inbound state
    * @returns               The transformed state that gets persisted
    */
-  async function outbound(state) {
-    const outboundState = { ...state };
+  async function inbound(state) {
+    let inboundState = { ...state };
     const pathsToGet = getPasswordPaths(state);
 
     for (const path of pathsToGet) {
@@ -86,11 +58,47 @@ export default function createPasswordTransform(config = {}) {
       if (!secret) continue;
 
       try {
-        logger(`Writing secret under ${path}`);
+        logger(`Writing secret under ${path}`, inboundState);
         await setPassword(serviceName, path, secret);
-        if (clearPasswords) unset(outboundState, path);
+
+        // Clear out the passwords unless directed not to. Use an immutable
+        // version of unset to avoid modifying the original state object.
+        if (clearPasswords) {
+          inboundState = unset(path, inboundState);
+        }
       } catch (err) {
         logger(`Unable to write ${path} to keytar`, err);
+      }
+    }
+
+    return inboundState;
+  }
+
+  /**
+   * Transform that occurs when the store is being hydrated with state.
+   * Retrieve the password path(s), get the actual passwords from the keychain
+   * and apply them to the outbound state.
+   *
+   * @param {Object} state  The outbound state
+   * @returns               The transformed state that will hydrate the store
+   */
+  async function outbound(state) {
+    let outboundState = { ...state };
+    const pathsToSet = getPasswordPaths(state);
+
+    for (const path of pathsToSet) {
+      try {
+        logger(`Reading secret from ${path}`, outboundState);
+        const secret = await getPassword(serviceName, path);
+
+        // If we found a stored password, set it on the outbound state.
+        // Use an immutable version of set to avoid modifying the original
+        // state object.
+        if (!!secret) {
+          outboundState = set(path, secret, outboundState);
+        }
+      } catch (err) {
+        logger(`Unable to read ${path} from keytar`, err);
       }
     }
 

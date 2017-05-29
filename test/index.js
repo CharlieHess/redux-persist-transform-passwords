@@ -1,5 +1,7 @@
-import get from 'lodash.get';
+import { get } from 'lodash';
 import { getPassword, setPassword } from 'keytar';
+import deepFreeze from 'deep-freeze';
+
 import createPasswordTransform from '../src';
 
 jest.mock('keytar', () => ({
@@ -38,7 +40,7 @@ describe('createPasswordTransform', () => {
     const state = { secret: 4815162342 };
     const transform = createPasswordTransform(defaultParams());
 
-    await transform.out(state);
+    await transform.in(state);
 
     expect(setPassword).toHaveBeenCalledWith('FedGovt', 'secret', state.secret);
   });
@@ -55,7 +57,7 @@ describe('createPasswordTransform', () => {
       passwordPaths: state => Object.keys(state)
     });
 
-    await transform.out(state);
+    await transform.in(state);
 
     expect(setPassword).toHaveBeenCalledTimes(3);
 
@@ -73,7 +75,7 @@ describe('createPasswordTransform', () => {
     let state = { secret: 4815162342 };
     let transform = createPasswordTransform(defaultParams());
 
-    let transformed = await transform.out(state);
+    let transformed = await transform.in(state);
 
     expect(transformed.secret).toEqual(undefined);
 
@@ -84,7 +86,7 @@ describe('createPasswordTransform', () => {
       clearPasswords: false
     });
 
-    transformed = await transform.out(state);
+    transformed = await transform.in(state);
     expect(transformed.secret).not.toEqual(undefined);
   });
 
@@ -93,7 +95,7 @@ describe('createPasswordTransform', () => {
     const transform = createPasswordTransform(defaultParams());
 
     getPassword.mockReturnValue('hunter42');
-    const transformed = await transform.in(state);
+    const transformed = await transform.out(state);
 
     expect(transformed.secret).toEqual('hunter42');
     expect(getPassword).toHaveBeenCalledWith('FedGovt', 'secret');
@@ -107,12 +109,25 @@ describe('createPasswordTransform', () => {
       throw new Error('Not permitted');
     });
 
-    const transformed = await transform.in(state);
+    const transformed = await transform.out(state);
 
     expect(transformed.secret).toEqual(undefined);
   });
 
-  it('should getting & setting deeply nested paths', async () => {
+  it('should not mutate the state object', async () => {
+    const state = { deeply: { nested: { secret: 4815162342 } } };
+    deepFreeze(state);
+
+    const transform = createPasswordTransform({
+      ...defaultParams(),
+      passwordPaths: 'deeply.nested.secret'
+    });
+
+    const transformed = await transform.in(state);
+    expect(transformed).not.toEqual(state);
+  });
+
+  it('should support getting & setting deeply nested paths', async () => {
     const state = {
       regular: {
         ole: [{
@@ -134,7 +149,7 @@ describe('createPasswordTransform', () => {
       passwordPaths,
     });
 
-    let transformed = await transform.out(state);
+    let transformed = await transform.in(state);
 
     expect(get(transformed, passwordPaths[0])).toEqual(undefined);
     expect(get(transformed, passwordPaths[1])).toEqual(undefined);
@@ -149,7 +164,7 @@ describe('createPasswordTransform', () => {
 
     getPassword.mockReturnValue('from the keychain');
 
-    transformed = await transform.in(state);
+    transformed = await transform.out(state);
 
     expect(get(transformed, passwordPaths[0])).toEqual('from the keychain');
     expect(get(transformed, passwordPaths[1])).toEqual('from the keychain');
