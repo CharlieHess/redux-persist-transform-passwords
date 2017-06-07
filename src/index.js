@@ -1,7 +1,6 @@
 import { get, noop } from 'lodash';
 import { set, unset } from 'lodash/fp';
 import { createTransform } from 'redux-persist';
-import { getPassword, setPassword } from 'keytar';
 
 /**
  * Creates a new transform instance.
@@ -25,6 +24,11 @@ export default function createPasswordTransform(config = {}) {
 
   if (!serviceName) throw new Error('serviceName is required');
   if (!passwordPaths) throw new Error('passwordPaths is required');
+
+  /**
+   * Late-require keytar so that we can handle failures.
+   */
+  const { getPassword, setPassword } = require('keytar');
 
   /**
    * Coerces the `passwordPaths` parameter into an array of paths.
@@ -63,7 +67,7 @@ export default function createPasswordTransform(config = {}) {
       }
 
       try {
-        logger(`Writing secret under ${path}`, inboundState);
+        logger(`Writing secret under ${path}`, secret);
         await setPassword(serviceName, path, coerceString(secret, serialize));
 
         // Clear out the passwords unless directed not to. Use an immutable
@@ -93,8 +97,8 @@ export default function createPasswordTransform(config = {}) {
 
     for (const path of pathsToSet) {
       try {
-        logger(`Reading secret from ${path}`, outboundState);
         const secret = await getPassword(serviceName, path);
+        logger(`Read secret from ${path}`, secret);
 
         // If we found a stored password, set it on the outbound state.
         // Use an immutable version of set to avoid modifying the original
