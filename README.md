@@ -46,8 +46,9 @@ You can find more usage examples by reading the tests.
 * `createPasswordTransform(config)` - Creates a new transform instance
 
 * `config (Object)` - Configuration parameters
-    * `serviceName (String)` - A unique identifier to reference passwords in the keychain
-    * `passwordPaths (String|Array<String>|((state) => String|Array<String>)` - Lodash getter path(s) to the state properties that should be written to `keytar`, or a function that, given your state, returns getter paths. `keytar` only supports writing strings, so if a property is not a string it will be coerced.
-    * `clearPasswords (Boolean)` - Whether or not to clear the properties from `passwordPaths` before the state is persisted. Defaults to `true`.
-    * `serialize (Boolean)` - Whether or not to serialize password properties as JSON strings. Defaults to `false`.
-    * `logger ((message, ...args) => void)` - An optional logging method. Defaults to `noop`.
+    * `serviceName (String)` - The top-level identifier for your app to store items in the keychain.
+    * `accountName (String)` - (Optional) A sub-identifier for individual entries. If not provided, strings taken from `passwordPaths` will be used.
+    * `passwordPaths (String|Array<String>|((state) => String|Array<String>)` - (Optional) Lodash getter path(s) to passwords in your state, or a function that, given your state, returns path(s). Leave empty to write the entire reducer.
+    * `clearPasswords (Boolean)` - (Optional) Whether or not to clear the properties from `passwordPaths` before the state is persisted. Defaults to `true`.
+    * `serialize (Boolean)` - (Optional) Whether or not to serialize password properties as JSON strings. Defaults to `false`.
+    * `logger ((message, ...args) => void)` - (Optional) An optional logging method. Defaults to `noop`.

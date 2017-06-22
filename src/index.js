@@ -7,9 +7,9 @@ import { createTransform } from 'redux-persist';
  *
  * @export
  * @param {Object} config
- * @param {String} config.serviceName       A unique identifier for your app to reference passwords in the keychain.
- * @param {String} [config.accountName]     A sub-identifier for individual entries. If not provided, paths taken from
- *                                          passwordPaths will be used.
+ * @param {String} config.serviceName       The top-level identifier for your app to store items in the keychain.
+ * @param {String} [config.accountName]     A sub-identifier for individual entries. If not provided, strings taken
+ *                                          from `passwordPaths` will be used.
  * @param {String|Array<String>|Function} [config.passwordPaths]  Lodash getter path(s) to passwords in your state, or
  *                                                                a function that, given your state, returns path(s).
  *                                                                Leave empty to write the entire reducer.
