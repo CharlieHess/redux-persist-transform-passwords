@@ -13,181 +13,220 @@ describe('createPasswordTransform', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
-  })
-
-  function defaultParams() {
-    return {
-      serviceName: 'FedGovt',
-      passwordPaths: 'secret'
-    };
-  }
-
-  it('should throw if any required arguments are missing', () => {
-    expect(() => createPasswordTransform()).toThrow();
-
-    expect(() => createPasswordTransform({
-      serviceName: 'tryThis'
-    })).toThrow();
-
-    expect(() => createPasswordTransform({
-      serviceName: 'tryThis',
-      passwordPaths: (state) => state,
-    })).not.toThrow();
   });
 
-  it('should set secrets from state when serializing', async () => {
-    const state = { secret: 4815162342 };
-    const transform = createPasswordTransform(defaultParams());
+  describe('with passwordPaths', () => {
+    function defaultParams() {
+      return {
+        serviceName: 'FedGovt',
+        passwordPaths: 'secret'
+      };
+    }
 
-    await transform.in(state);
+    it('should throw if any required arguments are missing', () => {
+      expect(() => createPasswordTransform()).toThrow();
 
-    expect(setPassword).toHaveBeenCalledWith('FedGovt', 'secret', state.secret.toString());
-  });
+      expect(() => createPasswordTransform({
+        serviceName: 'tryThis'
+      })).toThrow();
 
-  it('should support setting multiple secrets', async () => {
-    const state = {
-      first: 4,
-      second: 8,
-      third: 15
-    };
-
-    const transform = createPasswordTransform({
-      ...defaultParams(),
-      passwordPaths: state => Object.keys(state)
+      expect(() => createPasswordTransform({
+        serviceName: 'tryThis',
+        passwordPaths: (state) => state,
+      })).not.toThrow();
     });
 
-    await transform.in(state);
+    it('should set secrets from state when serializing', async () => {
+      const state = { secret: 4815162342 };
+      const transform = createPasswordTransform(defaultParams());
 
-    expect(setPassword).toHaveBeenCalledTimes(3);
+      await transform.in(state);
 
-    expect(setPassword.mock.calls[0][1]).toEqual('first');
-    expect(setPassword.mock.calls[0][2]).toEqual(state.first.toString());
-
-    expect(setPassword.mock.calls[1][1]).toEqual('second');
-    expect(setPassword.mock.calls[1][2]).toEqual(state.second.toString());
-
-    expect(setPassword.mock.calls[2][1]).toEqual('third');
-    expect(setPassword.mock.calls[2][2]).toEqual(state.third.toString());
-  });
-
-  it('should clear secrets from state unless directed not to', async () => {
-    let state = { secret: 4815162342 };
-    let transform = createPasswordTransform(defaultParams());
-
-    let transformed = await transform.in(state);
-
-    expect(transformed.secret).toEqual(undefined);
-
-    state = { secret: "I'm back" };
-
-    transform = createPasswordTransform({
-      ...defaultParams(),
-      clearPasswords: false
+      expect(setPassword).toHaveBeenCalledWith('FedGovt', 'secret', state.secret.toString());
     });
 
-    transformed = await transform.in(state);
-    expect(transformed.secret).not.toEqual(undefined);
-  });
+    it('should support setting multiple secrets', async () => {
+      const state = {
+        first: 4,
+        second: 8,
+        third: 15
+      };
 
-  it('should populate state with secrets when deserializing', async () => {
-    const state = { secret: undefined };
-    const transform = createPasswordTransform(defaultParams());
+      const transform = createPasswordTransform({
+        ...defaultParams(),
+        passwordPaths: state => Object.keys(state)
+      });
 
-    getPassword.mockReturnValue('hunter42');
-    const transformed = await transform.out(state);
+      await transform.in(state);
 
-    expect(transformed.secret).toEqual('hunter42');
-    expect(getPassword).toHaveBeenCalledWith('FedGovt', 'secret');
-  });
+      expect(setPassword).toHaveBeenCalledTimes(3);
 
-  it('should handle errors reading from the keychain', async () => {
-    const state = { secret: undefined };
-    const transform = createPasswordTransform(defaultParams());
+      expect(setPassword.mock.calls[0][1]).toEqual('first');
+      expect(setPassword.mock.calls[0][2]).toEqual(state.first.toString());
 
-    getPassword.mockImplementationOnce(() => {
-      throw new Error('Not permitted');
+      expect(setPassword.mock.calls[1][1]).toEqual('second');
+      expect(setPassword.mock.calls[1][2]).toEqual(state.second.toString());
+
+      expect(setPassword.mock.calls[2][1]).toEqual('third');
+      expect(setPassword.mock.calls[2][2]).toEqual(state.third.toString());
     });
 
-    const transformed = await transform.out(state);
+    it('should clear secrets from state unless directed not to', async () => {
+      let state = { secret: 4815162342 };
+      let transform = createPasswordTransform(defaultParams());
 
-    expect(transformed.secret).toEqual(undefined);
-  });
+      let transformed = await transform.in(state);
 
-  it('should not mutate the state object', async () => {
-    const state = { deeply: { nested: { secret: 4815162342 } } };
-    deepFreeze(state);
+      expect(transformed.secret).toEqual(undefined);
 
-    const transform = createPasswordTransform({
-      ...defaultParams(),
-      passwordPaths: 'deeply.nested.secret'
+      state = { secret: "I'm back" };
+
+      transform = createPasswordTransform({
+        ...defaultParams(),
+        clearPasswords: false
+      });
+
+      transformed = await transform.in(state);
+      expect(transformed.secret).not.toEqual(undefined);
     });
 
-    const transformed = await transform.in(state);
-    expect(transformed).not.toEqual(state);
-  });
+    it('should populate state with secrets when deserializing', async () => {
+      const state = { secret: undefined };
+      const transform = createPasswordTransform(defaultParams());
 
-  it('should support getting & setting deeply nested paths', async () => {
-    const state = {
-      regular: {
-        ole: [{
-          stuff: 'jk sekritz'
-        }]
-      },
-      other: {
-        things: 'moar sekrits'
-      }
-    };
+      getPassword.mockReturnValue('hunter42');
+      const transformed = await transform.out(state);
 
-    const passwordPaths = [
-      'regular.ole[0].stuff',
-      'other.things'
-    ];
-
-    const transform = createPasswordTransform({
-      ...defaultParams(),
-      passwordPaths,
+      expect(transformed.secret).toEqual('hunter42');
+      expect(getPassword).toHaveBeenCalledWith('FedGovt', 'secret');
     });
 
-    let transformed = await transform.in(state);
+    it('should handle errors reading from the keychain', async () => {
+      const state = { secret: undefined };
+      const transform = createPasswordTransform(defaultParams());
 
-    expect(get(transformed, passwordPaths[0])).toEqual(undefined);
-    expect(get(transformed, passwordPaths[1])).toEqual(undefined);
+      getPassword.mockImplementationOnce(() => {
+        throw new Error('Not permitted');
+      });
 
-    expect(setPassword).toHaveBeenCalledTimes(2);
+      const transformed = await transform.out(state);
 
-    expect(setPassword.mock.calls[0][1]).toEqual(passwordPaths[0]);
-    expect(setPassword.mock.calls[0][2]).toEqual('jk sekritz');
-
-    expect(setPassword.mock.calls[1][1]).toEqual(passwordPaths[1]);
-    expect(setPassword.mock.calls[1][2]).toEqual('moar sekrits');
-
-    getPassword.mockReturnValue('from the keychain');
-
-    transformed = await transform.out(state);
-
-    expect(get(transformed, passwordPaths[0])).toEqual('from the keychain');
-    expect(get(transformed, passwordPaths[1])).toEqual('from the keychain');
-
-    expect(getPassword).toHaveBeenCalledTimes(2);
-  });
-
-  it('should serialize secrets if specified', async () => {
-    const state = { secret: { password: 4815162342 } };
-    const transform = createPasswordTransform({
-      ...defaultParams(),
-      serialize: true
+      expect(transformed.secret).toEqual(undefined);
     });
 
-    await transform.in(state);
+    it('should not mutate the state object', async () => {
+      const state = { deeply: { nested: { secret: 4815162342 } } };
+      deepFreeze(state);
 
-    expect(setPassword).toHaveBeenCalledWith(
-      'FedGovt',
-      'secret',
-      JSON.stringify(state.secret)
-    );
+      const transform = createPasswordTransform({
+        ...defaultParams(),
+        passwordPaths: 'deeply.nested.secret'
+      });
 
-    const transformed = await transform.out(state);
+      const transformed = await transform.in(state);
+      expect(transformed).not.toEqual(state);
+    });
 
-    expect(transformed).toEqual(state);
+    it('should support getting & setting deeply nested paths', async () => {
+      const state = {
+        regular: {
+          ole: [{
+            stuff: 'jk sekritz'
+          }]
+        },
+        other: {
+          things: 'moar sekrits'
+        }
+      };
+
+      const passwordPaths = [
+        'regular.ole[0].stuff',
+        'other.things'
+      ];
+
+      const transform = createPasswordTransform({
+        ...defaultParams(),
+        passwordPaths,
+      });
+
+      let transformed = await transform.in(state);
+
+      expect(get(transformed, passwordPaths[0])).toEqual(undefined);
+      expect(get(transformed, passwordPaths[1])).toEqual(undefined);
+
+      expect(setPassword).toHaveBeenCalledTimes(2);
+
+      expect(setPassword.mock.calls[0][1]).toEqual(passwordPaths[0]);
+      expect(setPassword.mock.calls[0][2]).toEqual('jk sekritz');
+
+      expect(setPassword.mock.calls[1][1]).toEqual(passwordPaths[1]);
+      expect(setPassword.mock.calls[1][2]).toEqual('moar sekrits');
+
+      getPassword.mockReturnValue('from the keychain');
+
+      transformed = await transform.out(state);
+
+      expect(get(transformed, passwordPaths[0])).toEqual('from the keychain');
+      expect(get(transformed, passwordPaths[1])).toEqual('from the keychain');
+
+      expect(getPassword).toHaveBeenCalledTimes(2);
+    });
+
+    it('should serialize secrets if specified', async () => {
+      const state = { secret: { password: 4815162342 } };
+      const transform = createPasswordTransform({
+        ...defaultParams(),
+        serialize: true
+      });
+
+      await transform.in(state);
+
+      expect(setPassword).toHaveBeenCalledWith(
+        'FedGovt',
+        'secret',
+        JSON.stringify(state.secret)
+      );
+
+      const transformed = await transform.out(state);
+
+      expect(transformed).toEqual(state);
+    });
+  });
+
+  describe('without passwordPaths', () => {
+    function defaultParams() {
+      return {
+        serviceName: 'FedGovt',
+        accountName: 'NSA'
+      };
+    }
+
+    it('should write the entire reducer into the keychain', async () => {
+      const state = { secret: { password: 4815162342 } };
+      deepFreeze(state);
+
+      const transform = createPasswordTransform(defaultParams());
+      const transformed = await transform.in(state);
+
+      expect(setPassword).toHaveBeenCalledWith(
+        'FedGovt',
+        'NSA',
+        JSON.stringify(state)
+      );
+
+      expect(transformed).not.toEqual(state);
+      expect(transformed).toEqual({});
+    });
+
+    it('should read the entire reducer from the keychain', async () => {
+      const transform = createPasswordTransform(defaultParams());
+
+      const result = { secret: 'hunter42' };
+      getPassword.mockReturnValue(JSON.stringify(result));
+      const transformed = await transform.out({});
+
+      expect(transformed).toEqual(result);
+      expect(getPassword).toHaveBeenCalledWith('FedGovt', 'NSA');
+    });
   });
 });
