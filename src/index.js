@@ -7,23 +7,27 @@ import { createTransform } from 'redux-persist';
  *
  * @export
  * @param {Object} config
- * @param {String} config.serviceName     A unique identifier to reference passwords in the keychain
- * @param {String|Array<String>|Function} config.passwordPaths  Lodash getter path(s) to passwords
- * in your state, or a function that, given your state, returns path(s)
- * @param {Boolean} config.clearPasswords False to retain passwords in the persisted state
- * @param {Boolean} config.serialize      True to serialize password objects to JSON
- * @param {Function} config.logger        A logging method
- * @returns {Transform}                   The redux-persist Transform
+ * @param {String} config.serviceName       A unique identifier for your app to reference passwords in the keychain.
+ * @param {String} [config.accountName]     A sub-identifier for individual entries. If not provided, paths taken from
+ *                                          passwordPaths will be used.
+ * @param {String|Array<String>|Function} [config.passwordPaths]  Lodash getter path(s) to passwords in your state, or
+ *                                                                a function that, given your state, returns path(s).
+ *                                                                Leave empty to write the entire reducer.
+ * @param {Boolean} [config.clearPasswords] False to retain passwords in the persisted state.
+ * @param {Boolean} [config.serialize]      True to serialize password objects to JSON.
+ * @param {Function} [config.logger]        A logging method.
+ * @returns {Transform}                     The redux-persist Transform.
  */
 export default function createPasswordTransform(config = {}) {
   const serviceName = config.serviceName;
+  const accountName = config.accountName;
   const passwordPaths = config.passwordPaths;
   const clearPasswords = config.clearPasswords !== false;
-  const serialize = !!config.serialize;
+  const serialize = config.serialize || !config.passwordPaths;
   const logger = config.logger || noop;
 
   if (!serviceName) throw new Error('serviceName is required');
-  if (!passwordPaths) throw new Error('passwordPaths is required');
+  if (!passwordPaths && !accountName) throw new Error('Either passwordPaths or accountName is required');
 
   /**
    * Late-require keytar so that we can handle failures.
@@ -34,14 +38,15 @@ export default function createPasswordTransform(config = {}) {
    * Coerces the `passwordPaths` parameter into an array of paths.
    *
    * @param {Object} state  The state being transformed
-   * @returns               An array of paths in state that contain passwords
+   * @returns               An array of paths in state that contain passwords,
+   *                        or null if using the entire subkey
    */
   function getPasswordPaths(state) {
+    if (!passwordPaths) return null;
+
     let paths = typeof passwordPaths === 'function'
       ? passwordPaths(state)
       : passwordPaths;
-
-    if (!paths) throw new Error('Empty password paths');
 
     return typeof paths === 'string'
       ? [paths]
@@ -59,28 +64,22 @@ export default function createPasswordTransform(config = {}) {
     let inboundState = { ...state };
     const pathsToGet = getPasswordPaths(state);
 
-    for (const path of pathsToGet) {
-      const secret = get(state, path);
-      if (!secret) {
-        logger('Nothing found at path', path);
-        continue;
+    if (pathsToGet) {
+      for (const path of pathsToGet) {
+        inboundState = await setPasswordForPath(inboundState, path);
       }
+      return inboundState;
+    } else {
+      logger('Writing entire reducer');
 
-      try {
-        logger(`Writing secret under ${path}`, secret);
-        await setPassword(serviceName, path, coerceString(secret, serialize));
+      await setPassword(
+        serviceName,
+        accountName,
+        coerceString(inboundState, serialize)
+      );
 
-        // Clear out the passwords unless directed not to. Use an immutable
-        // version of unset to avoid modifying the original state object.
-        if (clearPasswords) {
-          inboundState = unset(path, inboundState);
-        }
-      } catch (err) {
-        logger(`Unable to write ${path} to keytar`, err);
-      }
+      return {};
     }
-
-    return inboundState;
   }
 
   /**
@@ -95,21 +94,62 @@ export default function createPasswordTransform(config = {}) {
     let outboundState = { ...state };
     const pathsToSet = getPasswordPaths(state);
 
-    for (const path of pathsToSet) {
-      try {
-        const secret = await getPassword(serviceName, path);
-        logger(`Read secret from ${path}`, secret);
-
-        // If we found a stored password, set it on the outbound state.
-        // Use an immutable version of set to avoid modifying the original
-        // state object.
-        if (!!secret) {
-          const toSet = serialize ? JSON.parse(secret) : secret;
-          outboundState = set(path, toSet, outboundState);
-        }
-      } catch (err) {
-        logger(`Unable to read ${path} from keytar`, err);
+    if (pathsToSet) {
+      for (const path of pathsToSet) {
+        outboundState = await(getPasswordForPath(outboundState, path));
       }
+
+      return outboundState;
+    } else {
+      logger('Reading entire reducer');
+
+      const secret = await getPassword(serviceName, accountName);
+      return JSON.parse(secret);
+    }
+  }
+
+  async function setPasswordForPath(inboundState, path) {
+    const secret = get(inboundState, path);
+    if (!secret) {
+      logger('Nothing found at path', path);
+      return;
+    }
+
+    try {
+      logger(`Writing secret under ${path}`, secret);
+
+      await setPassword(
+        serviceName,
+        accountName || path,
+        coerceString(secret, serialize)
+      );
+
+      // Clear out the passwords unless directed not to. Use an immutable
+      // version of unset to avoid modifying the original state object.
+      if (clearPasswords) {
+        inboundState = unset(path, inboundState);
+      }
+    } catch (err) {
+      logger(`Unable to write ${path} to keytar`, err);
+    }
+
+    return inboundState;
+  }
+
+  async function getPasswordForPath(outboundState, path) {
+    try {
+      const secret = await getPassword(serviceName, accountName || path);
+      logger(`Read secret from ${path}`, secret);
+
+      // If we found a stored password, set it on the outbound state.
+      // Use an immutable version of set to avoid modifying the original
+      // state object.
+      if (secret) {
+        const toSet = serialize ? JSON.parse(secret) : secret;
+        outboundState = set(path, toSet, outboundState);
+      }
+    } catch (err) {
+      logger(`Unable to read ${path} from keytar`, err);
     }
 
     return outboundState;
