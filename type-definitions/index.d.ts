@@ -13,4 +13,4 @@ interface PasswordConfig<State> extends TransformConfig {
 
 export default function createPasswordTransform<State, Raw>(config?: PasswordConfig<State>): Transform<State, Raw>;
 
-export async function accessKeychain(serviceName: string, accountName: string): Promise<boolean>;
+export function accessKeychain(serviceName: string, accountName: string): Promise<boolean>;
