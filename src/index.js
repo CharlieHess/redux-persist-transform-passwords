@@ -3,6 +3,24 @@ import { set, unset } from 'lodash/fp';
 import { createTransform } from 'redux-persist';
 
 /**
+ * Utility function for consumers to check if they can access the keychain.
+ *
+ * @export
+ * @param {String} serviceName  The top-level identifier for your app to store items in the keychain.
+ * @param {String} accountName  A sub-identifier for individual entries.
+ * @returns {Promise<Boolean>}  True if the keychain can be accessed, false if it threw an error.
+ */
+export async function accessKeychain(serviceName, accountName) {
+  try {
+    const getPassword = require('keytar').getPassword;
+    await getPassword(serviceName, accountName);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+/**
  * Creates a new transform instance.
  *
  * @export

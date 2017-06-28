@@ -2,7 +2,9 @@ import { get } from 'lodash';
 import { getPassword, setPassword } from 'keytar';
 import deepFreeze from 'deep-freeze';
 
-import createPasswordTransform from '../src';
+import createPasswordTransform, {
+  accessKeychain
+} from '../src';
 
 jest.mock('keytar', () => ({
   getPassword: jest.fn(),
@@ -10,7 +12,6 @@ jest.mock('keytar', () => ({
 }));
 
 describe('createPasswordTransform', () => {
-
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -228,5 +229,22 @@ describe('createPasswordTransform', () => {
       expect(transformed).toEqual(result);
       expect(getPassword).toHaveBeenCalledWith('FedGovt', 'NSA');
     });
+  });
+});
+
+describe('accessKeychain', () => {
+  it('should return a boolean indicating whether or not we have keychain access', async () => {
+    getPassword.mockImplementationOnce(() => {
+      throw new Error();
+    });
+    getPassword.mockImplementationOnce(() => {
+      return 'hunter42';
+    });
+
+    let canAccess = await accessKeychain();
+    expect(canAccess).toEqual(false);
+
+    canAccess = await accessKeychain();
+    expect(canAccess).toEqual(true);
   });
 });
