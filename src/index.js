@@ -88,15 +88,19 @@ export default function createPasswordTransform(config = {}) {
       }
       return inboundState;
     } else {
-      logger('TransformPasswords: Writing entire reducer');
+      try {
+        logger('TransformPasswords: Writing entire reducer');
 
-      await setPassword(
-        serviceName,
-        accountName,
-        coerceString(inboundState, serialize)
-      );
+        await setPassword(
+          serviceName,
+          accountName,
+          coerceString(inboundState, serialize)
+        );
 
-      return {};
+        return {};
+      } catch (err) {
+        logger('TransformPasswords: Unable to write reducer', err);
+      }
     }
   }
 
@@ -119,10 +123,14 @@ export default function createPasswordTransform(config = {}) {
 
       return outboundState;
     } else {
-      logger('TransformPasswords: Reading entire reducer');
+      try {
+        logger('TransformPasswords: Reading entire reducer');
 
-      const secret = await getPassword(serviceName, accountName);
-      return JSON.parse(secret);
+        const secret = await getPassword(serviceName, accountName);
+        return JSON.parse(secret);
+      } catch (err) {
+        logger('TransformPasswords: Unable to read reducer', err);
+      }
     }
   }
 
