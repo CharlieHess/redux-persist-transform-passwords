@@ -88,7 +88,7 @@ export default function createPasswordTransform(config = {}) {
       }
       return inboundState;
     } else {
-      logger('Writing entire reducer');
+      logger('TransformPasswords: Writing entire reducer');
 
       await setPassword(
         serviceName,
@@ -119,7 +119,7 @@ export default function createPasswordTransform(config = {}) {
 
       return outboundState;
     } else {
-      logger('Reading entire reducer');
+      logger('TransformPasswords: Reading entire reducer');
 
       const secret = await getPassword(serviceName, accountName);
       return JSON.parse(secret);
@@ -129,12 +129,12 @@ export default function createPasswordTransform(config = {}) {
   async function setPasswordForPath(inboundState, path) {
     const secret = get(inboundState, path);
     if (!secret) {
-      logger('Nothing found at path', path);
+      logger('TransformPasswords: Nothing found at path', path);
       return;
     }
 
     try {
-      logger(`Writing secret under ${path}`, secret);
+      logger(`TransformPasswords: Writing secret under ${path}`, secret);
 
       await setPassword(
         serviceName,
@@ -148,7 +148,7 @@ export default function createPasswordTransform(config = {}) {
         inboundState = unset(path, inboundState);
       }
     } catch (err) {
-      logger(`Unable to write ${path} to keytar`, err);
+      logger(`TransformPasswords: Unable to write ${path} to keytar`, err);
     }
 
     return inboundState;
@@ -157,7 +157,7 @@ export default function createPasswordTransform(config = {}) {
   async function getPasswordForPath(outboundState, path) {
     try {
       const secret = await getPassword(serviceName, accountName || path);
-      logger(`Read secret from ${path}`, secret);
+      logger(`TransformPasswords: Read secret from ${path}`, secret);
 
       // If we found a stored password, set it on the outbound state.
       // Use an immutable version of set to avoid modifying the original
@@ -167,7 +167,7 @@ export default function createPasswordTransform(config = {}) {
         outboundState = set(path, toSet, outboundState);
       }
     } catch (err) {
-      logger(`Unable to read ${path} from keytar`, err);
+      logger(`TransformPasswords: Unable to read ${path} from keytar`, err);
     }
 
     return outboundState;
