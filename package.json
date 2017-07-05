@@ -24,6 +24,7 @@
   "author": "Charlie Hess",
   "license": "MIT",
   "dependencies": {
+    "babel-runtime": "^6.23.0",
     "keytar": "^4.0.3",
     "lodash": "^4.17.4"
   },
