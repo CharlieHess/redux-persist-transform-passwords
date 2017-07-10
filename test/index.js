@@ -229,6 +229,30 @@ describe('createPasswordTransform', () => {
       expect(transformed).toEqual(result);
       expect(getPassword).toHaveBeenCalledWith('FedGovt', 'NSA');
     });
+
+    it('should persist an empty object if writing the password fails', async () => {
+      const state = { secret: { password: 4815162342 } };
+      deepFreeze(state);
+
+      const transform = createPasswordTransform(defaultParams());
+      setPassword.mockImplementationOnce(() => {
+        throw new Error();
+      });
+      const transformed = await transform.in(state);
+      expect(transformed).toEqual({});
+    });
+
+    it('should return an empty object if reading the password fails', async () => {
+      const transform = createPasswordTransform(defaultParams());
+
+      const result = { secret: 'hunter42' };
+      getPassword.mockImplementationOnce(() => {
+        throw new Error();
+      });
+      const transformed = await transform.out({});
+
+      expect(transformed).toEqual({});
+    });
   });
 });
 

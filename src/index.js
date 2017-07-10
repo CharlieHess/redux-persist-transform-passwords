@@ -100,6 +100,7 @@ export default function createPasswordTransform(config = {}) {
         return {};
       } catch (err) {
         logger('TransformPasswords: Unable to write reducer', err);
+        return {};
       }
     }
   }
@@ -130,6 +131,7 @@ export default function createPasswordTransform(config = {}) {
         return JSON.parse(secret);
       } catch (err) {
         logger('TransformPasswords: Unable to read reducer', err);
+        return {};
       }
     }
   }
