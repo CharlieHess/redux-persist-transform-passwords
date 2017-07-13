@@ -53,6 +53,8 @@ You can find more usage examples by reading the tests.
     * `serialize (Boolean)` - (Optional) Whether or not to serialize password properties as JSON strings. Defaults to `false`.
     * `logger ((message, ...args) => void)` - (Optional) An optional logging method. Defaults to `noop`.
 
+### `clearKeychain(serviceName, accountName): Promise<boolean>` - Remove an entry from the keychain.
+
 ### `accessKeychain(serviceName, accountName): Promise<boolean>` - Test for access to the keychain.
 
 Since we don't want to throw any errors during the state transform, we'll catch & log any exceptions in the keychain operation. To give consumers a way to check access beforehand (and to control the time at which the OS keychain prompt appears), we provide the `accessKeychain` method. You'll need to call this method _before_ your Redux store is rehydrated, since the rehydrate will attempt to read from the keychain:

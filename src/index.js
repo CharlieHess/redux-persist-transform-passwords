@@ -29,6 +29,24 @@ export async function accessKeychain(serviceName, accountName) {
 }
 
 /**
+ * Utility function for consumers to clear the keychain when they're done with
+ * it (e.g., the user has uninstalled the app).
+ *
+ * @export
+ * @param {String} serviceName  The top-level identifier for your app to store items in the keychain.
+ * @param {String} accountName  A sub-identifier for individual entries.
+ * @returns {Promise<Boolean>}  True if the entry was removed, false otherwise.
+ */
+export async function clearKeychain(serviceName, accountName) {
+  try {
+    const { deletePassword } = require('keytar');
+    await deletePassword(serviceName, accountName);
+  } catch (err) {
+    return false;
+  }
+}
+
+/**
  * Creates a new transform instance.
  *
  * @export
