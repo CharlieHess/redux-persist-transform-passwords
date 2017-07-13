@@ -4,6 +4,8 @@ import { createTransform } from 'redux-persist';
 
 /**
  * Utility function for consumers to check if they can access the keychain.
+ * Just reading from the keychain isn't sufficient on all platforms; we need to
+ * test writing to it as well.
  *
  * @export
  * @param {String} serviceName  The top-level identifier for your app to store items in the keychain.
@@ -12,9 +14,15 @@ import { createTransform } from 'redux-persist';
  */
 export async function accessKeychain(serviceName, accountName) {
   try {
-    const getPassword = require('keytar').getPassword;
-    await getPassword(serviceName, accountName);
-    return true;
+    const { setPassword, deletePassword } = require('keytar');
+
+    // We don't want to overwrite valid data so append a dummy string
+    const accessCheckAccount = accountName.concat('-access');
+    await setPassword(serviceName, accessCheckAccount, 'access');
+
+    // Also don't want to pollute the keychain so delete it afterward
+    const wasDeleted = await deletePassword(serviceName, accessCheckAccount);
+    return wasDeleted;
   } catch (err) {
     return false;
   }

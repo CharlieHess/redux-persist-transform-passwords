@@ -1,5 +1,5 @@
 import { get } from 'lodash';
-import { getPassword, setPassword } from 'keytar';
+import { getPassword, setPassword, deletePassword } from 'keytar';
 import deepFreeze from 'deep-freeze';
 
 import createPasswordTransform, {
@@ -8,7 +8,8 @@ import createPasswordTransform, {
 
 jest.mock('keytar', () => ({
   getPassword: jest.fn(),
-  setPassword: jest.fn()
+  setPassword: jest.fn(),
+  deletePassword: jest.fn()
 }));
 
 describe('createPasswordTransform', () => {
@@ -257,18 +258,34 @@ describe('createPasswordTransform', () => {
 });
 
 describe('accessKeychain', () => {
-  it('should return a boolean indicating whether or not we have keychain access', async () => {
-    getPassword.mockImplementationOnce(() => {
-      throw new Error();
-    });
-    getPassword.mockImplementationOnce(() => {
-      return 'hunter42';
-    });
+  it('should not overwrite data in the given account name', async () => {
+    await accessKeychain('CIA', 'Comey');
+    expect(setPassword.mock.calls.length).toEqual(1);
+    expect(setPassword.mock.calls[0][0]).toEqual('CIA');
+    expect(setPassword.mock.calls[0][1]).toEqual('Comey-access');
+  });
 
-    let canAccess = await accessKeychain();
-    expect(canAccess).toEqual(false);
+  it('should test writing to & deleting from the keychain', async () => {
+    const serviceName = 'NSA';
+    const accountName = 'malware'
 
-    canAccess = await accessKeychain();
-    expect(canAccess).toEqual(true);
+    setPassword.mockImplementationOnce(() => { throw new Error(); });
+    setPassword.mockImplementation(() => { });
+
+    deletePassword.mockImplementationOnce(() => { throw new Error(); });
+    deletePassword.mockImplementationOnce(() => false);
+    deletePassword.mockImplementationOnce(() => true);
+
+    // Attempt 1: setPassword throws -> fail
+    expect(await accessKeychain(serviceName, accountName)).toEqual(false);
+
+    // Attempt 2: setPassword success, deletePassword throws -> fail
+    expect(await accessKeychain(serviceName, accountName)).toEqual(false);
+
+    // Attempt 3: setPassword success, deletePassword fails -> fail
+    expect(await accessKeychain(serviceName, accountName)).toEqual(false);
+
+    // Attempt 4: setPassword success, deletePassword success -> success
+    expect(await accessKeychain(serviceName, accountName)).toEqual(true);
   });
 });
