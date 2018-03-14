@@ -12,7 +12,7 @@ import { createTransform } from 'redux-persist';
  * @param {String} accountName  A sub-identifier for individual entries.
  * @returns {Promise<Boolean>}  True if the keychain can be accessed, false if it threw an error.
  */
-export async function accessKeychain(serviceName, accountName) {
+export async function accessKeychain(serviceName, accountName, logger) {
   try {
     const { setPassword, deletePassword } = require('keytar');
 
@@ -23,7 +23,8 @@ export async function accessKeychain(serviceName, accountName) {
     // Also don't want to pollute the keychain so delete it afterward
     const wasDeleted = await deletePassword(serviceName, accessCheckAccount);
     return wasDeleted;
-  } catch (err) {
+  } catch (error) {
+    if (logger) logger('TransformPasswords: Cannot access keychain', { error });
     return false;
   }
 }
@@ -37,11 +38,12 @@ export async function accessKeychain(serviceName, accountName) {
  * @param {String} accountName  A sub-identifier for individual entries.
  * @returns {Promise<Boolean>}  True if the entry was removed, false otherwise.
  */
-export async function clearKeychain(serviceName, accountName) {
+export async function clearKeychain(serviceName, accountName, logger) {
   try {
     const { deletePassword } = require('keytar');
     await deletePassword(serviceName, accountName);
-  } catch (err) {
+  } catch (error) {
+    if (logger) logger('TransformPasswords: Cannot clear keychain', { error });
     return false;
   }
 }
@@ -115,8 +117,6 @@ export default function createPasswordTransform(config = {}) {
       return inboundState;
     } else {
       try {
-        logger('TransformPasswords: Writing entire reducer');
-
         await setPassword(
           serviceName,
           accountName,
@@ -124,8 +124,8 @@ export default function createPasswordTransform(config = {}) {
         );
 
         return {};
-      } catch (err) {
-        logger('TransformPasswords: Unable to write reducer', err);
+      } catch (error) {
+        logger('TransformPasswords: Unable to write reducer', { error });
         return {};
       }
     }
@@ -151,12 +151,10 @@ export default function createPasswordTransform(config = {}) {
       return outboundState;
     } else {
       try {
-        logger('TransformPasswords: Reading entire reducer');
-
         const secret = await getPassword(serviceName, accountName);
         return JSON.parse(secret);
-      } catch (err) {
-        logger('TransformPasswords: Unable to read reducer', err);
+      } catch (error) {
+        logger('TransformPasswords: Unable to read reducer', { error });
         return {};
       }
     }
@@ -165,13 +163,11 @@ export default function createPasswordTransform(config = {}) {
   async function setPasswordForPath(inboundState, path) {
     const secret = get(inboundState, path);
     if (!secret) {
-      logger('TransformPasswords: Nothing found at path', path);
+      logger('TransformPasswords: Nothing found at path', { path });
       return;
     }
 
     try {
-      logger(`TransformPasswords: Writing secret under ${path}`, secret);
-
       await setPassword(
         serviceName,
         accountName || path,
@@ -183,8 +179,8 @@ export default function createPasswordTransform(config = {}) {
       if (clearPasswords) {
         inboundState = unset(path, inboundState);
       }
-    } catch (err) {
-      logger(`TransformPasswords: Unable to write ${path} to keytar`, err);
+    } catch (error) {
+      logger(`TransformPasswords: Unable to write ${path} to keytar`, { error });
     }
 
     return inboundState;
@@ -193,7 +189,6 @@ export default function createPasswordTransform(config = {}) {
   async function getPasswordForPath(outboundState, path) {
     try {
       const secret = await getPassword(serviceName, accountName || path);
-      logger(`TransformPasswords: Read secret from ${path}`, secret);
 
       // If we found a stored password, set it on the outbound state.
       // Use an immutable version of set to avoid modifying the original
@@ -202,8 +197,8 @@ export default function createPasswordTransform(config = {}) {
         const toSet = serialize ? JSON.parse(secret) : secret;
         outboundState = set(path, toSet, outboundState);
       }
-    } catch (err) {
-      logger(`TransformPasswords: Unable to read ${path} from keytar`, err);
+    } catch (error) {
+      logger(`TransformPasswords: Unable to read ${path} from keytar`, { error });
     }
 
     return outboundState;
