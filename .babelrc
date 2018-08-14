@@ -1,11 +1,42 @@
 {
-  "presets": ["es2015", "stage-2"],
-  "plugins": [
-    "lodash", [
-      "transform-runtime", {
-        "polyfill": false,
-        "regenerator": true
-      }
-    ]
-  ]
+  "env": {
+    "cjs": {
+      "presets": [
+        "es2015",
+        "stage-2"
+      ],
+      "plugins": [
+        "lodash",
+        [
+          "transform-runtime",
+          {
+            "polyfill": false,
+            "regenerator": true
+          }
+        ]
+      ]
+    },
+    "esm": {
+      "presets": [
+        [
+          "env",
+          {
+            "targets": {
+              "node": "8.9.3"
+            },
+            "modules": false
+          }
+        ]
+      ],
+      "plugins": [
+        "lodash",
+        [
+          "transform-object-rest-spread",
+          {
+            "useBuiltIns": true
+          }
+        ]
+      ]
+    }
+  }
 }

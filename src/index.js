@@ -1,6 +1,17 @@
-import { get, noop } from 'lodash';
-import { set, unset } from 'lodash/fp';
+import get from 'lodash/get';
+import setWith from 'lodash/setWith';
+import clone from 'lodash/clone';
+import isEmpty from 'lodash/isEmpty';
+import unset from 'lodash/unset';
 import { createTransform } from 'redux-persist';
+
+const deleteIn = (state, path) => {
+  if (isEmpty(path)) return {};
+  const valueAtPath = get(state, path);
+  const stateWithClonedPath = setWith({ ...state }, path, valueAtPath, clone);
+  unset(stateWithClonedPath, path);
+  return stateWithClonedPath;
+};
 
 /**
  * Utility function for consumers to check if they can access the keychain.
@@ -70,7 +81,7 @@ export default function createPasswordTransform(config = {}) {
   const passwordPaths = config.passwordPaths;
   const clearPasswords = config.clearPasswords !== false;
   const serialize = config.serialize || !config.passwordPaths;
-  const logger = config.logger || noop;
+  const logger = config.logger || (() => { /* noop */ });
 
   if (!serviceName) throw new Error('serviceName is required');
   if (!passwordPaths && !accountName) throw new Error('Either passwordPaths or accountName is required');
@@ -145,7 +156,7 @@ export default function createPasswordTransform(config = {}) {
 
     if (pathsToSet) {
       for (const path of pathsToSet) {
-        outboundState = await(getPasswordForPath(outboundState, path));
+        outboundState = await (getPasswordForPath(outboundState, path));
       }
 
       return outboundState;
@@ -177,7 +188,7 @@ export default function createPasswordTransform(config = {}) {
       // Clear out the passwords unless directed not to. Use an immutable
       // version of unset to avoid modifying the original state object.
       if (clearPasswords) {
-        inboundState = unset(path, inboundState);
+        inboundState = deleteIn(inboundState, path);
       }
     } catch (error) {
       logger(`TransformPasswords: Unable to write ${path} to keytar`, { error });
@@ -195,7 +206,7 @@ export default function createPasswordTransform(config = {}) {
       // state object.
       if (secret) {
         const toSet = serialize ? JSON.parse(secret) : secret;
-        outboundState = set(path, toSet, outboundState);
+        outboundState = setWith(clone(outboundState), path, toSet, clone);
       }
     } catch (error) {
       logger(`TransformPasswords: Unable to read ${path} from keytar`, { error });
