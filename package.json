@@ -3,6 +3,7 @@
   "version": "1.4.0",
   "description": "Store parts of your state tree in keytar",
   "main": "lib/index.js",
+  "module": "lib/index_esm.js",
   "jest": {
     "testMatch": [
       "**/test/**"
@@ -14,7 +15,7 @@
     "build:esm": "cross-env process.env.BABEL_ENV=esm babel ./src/index.js -o lib/index_esm.js",
     "test": "cross-env process.env.BABEL_ENV=cjs jest",
     "clean": "rimraf lib",
-    "copy-types": "cp type-definitions/index.d.ts lib/index.d.ts && cp type-definitions/index.d.ts lib/index_esm.d.ts",
+    "copy-types": "cp type-definitions/index.d.ts lib/index.d.ts",
     "prepublish": "npm run clean && npm run build"
   },
   "repository": {
