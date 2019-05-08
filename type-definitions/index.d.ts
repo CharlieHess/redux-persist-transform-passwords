@@ -16,12 +16,12 @@ export default function createPasswordTransform<State, Raw>(config?: PasswordCon
 export function accessKeychain(
   serviceName: string,
   accountName: string,
-  logger: (message: string, ...args: Array<any>) => void
+  logger?: (message: string, ...args: Array<any>) => void
 ): Promise<boolean>;
 
 export function clearKeychain(
   serviceName: string,
   accountName: string,
-  logger: (message: string, ...args: Array<any>) => void
+  logger?: (message: string, ...args: Array<any>) => void
 ): Promise<boolean>;
 
