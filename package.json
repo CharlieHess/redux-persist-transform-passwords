@@ -16,7 +16,7 @@
     "test": "cross-env process.env.BABEL_ENV=cjs jest",
     "clean": "rimraf lib",
     "copy-types": "cp type-definitions/index.d.ts lib/index.d.ts",
-    "prepublish": "npm run clean && npm run build"
+    "prepare": "npm run clean && npm run build"
   },
   "repository": {
     "type": "git",
@@ -45,6 +45,7 @@
     "rimraf": "~2.5.4"
   },
   "peerDependencies": {
+    "redux": ">=3.0.0",
     "redux-persist": ">=4.0.0"
   },
   "keywords": [
