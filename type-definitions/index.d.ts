@@ -13,5 +13,15 @@ interface PasswordConfig<State> extends TransformConfig {
 
 export default function createPasswordTransform<State, Raw>(config?: PasswordConfig<State>): Transform<State, Raw>;
 
-export function accessKeychain(serviceName: string, accountName: string, logger?: Function): Promise<boolean>;
-export function clearKeychain(serviceName: string, accountName: string, logger?: Function): Promise<boolean>;
+export function accessKeychain(
+  serviceName: string,
+  accountName: string,
+  logger?: (message: string, ...args: Array<any>) => void
+): Promise<boolean>;
+
+export function clearKeychain(
+  serviceName: string,
+  accountName: string,
+  logger?: (message: string, ...args: Array<any>) => void
+): Promise<boolean>;
+
