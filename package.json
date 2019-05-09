@@ -1,6 +1,6 @@
 {
   "name": "redux-persist-transform-passwords",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Store parts of your state tree in keytar",
   "main": "lib/index.js",
   "module": "lib/index_esm.js",
