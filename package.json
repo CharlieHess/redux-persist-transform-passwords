@@ -27,7 +27,7 @@
   "license": "MIT",
   "dependencies": {
     "babel-runtime": "^6.23.0",
-    "keytar": "^4.2.1",
+    "keytar": "^4.6.0",
     "lodash": "^4.17.10"
   },
   "devDependencies": {
